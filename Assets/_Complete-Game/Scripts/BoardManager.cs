@@ -34,12 +34,16 @@ namespace Completed
 		public GameObject[] enemyTiles;									//Array of enemy prefabs.
 		public GameObject[] outerWallTiles;								//Array of outer tile prefabs.
         public GameObject nodePrefab;
+        public GameObject[,] tileGameObjectGrid;
         public string[,] tileGrid;
         // W = wall
         // F = floor
         // P = player
+        // E = end
         // f = food
         // e = enemy
+        public GameObject playerNode;
+        public GameObject endNode;
 		
 		private Transform boardHolder;									//A variable to store a reference to the transform of our Board object.
 		private List <Vector3> gridPositions = new List <Vector3> ();   //A list of possible locations to place tiles.
@@ -60,13 +64,13 @@ namespace Completed
 					gridPositions.Add (new Vector3(x, y, 0f));
 				}
 			}
-		}
-		
+		}		
 		
 		//Sets up the outer walls and floor (background) of the game board.
 		void BoardSetup ()
 		{
             tileGrid = new string[columns, rows];
+            tileGameObjectGrid = new GameObject[columns, rows];
 
             //Instantiate Board and set boardHolder to its transform.
             boardHolder = new GameObject ("Board").transform;
@@ -100,8 +104,8 @@ namespace Completed
 			}
 
             tileGrid[0, 0] = "P";
-		}
-		
+            tileGrid[columns-1, rows-1] = "E";
+        }		
 		
 		//RandomPosition returns a random position from our list gridPositions.
 		Vector3 RandomPosition ()
@@ -117,8 +121,7 @@ namespace Completed
 			
 			//Return the randomly selected Vector3 position.
 			return randomPosition;
-		}
-		
+		}		
 		
 		//LayoutObjectAtRandom accepts an array of game objects to choose from along with a minimum and maximum range for the number of objects to create.
 		void LayoutObjectAtRandom (string tileType, int minimum, int maximum)
@@ -157,8 +160,7 @@ namespace Completed
 				//Instantiate tileChoice at the position returned by RandomPosition with no change in rotation
 				Instantiate(tileChoice, randomPosition, Quaternion.identity);
 			}
-		}
-		
+		}		
 		
 		//SetupScene initializes our level and calls the previous functions to lay out the game board
 		public void SetupScene (int level)
@@ -186,7 +188,7 @@ namespace Completed
 
             GenerateNodes();
 
-            PrintGrid();
+            FindObjectOfType<Player>().StartPathfinding();
         }
 
         public void PrintGrid()
@@ -206,11 +208,6 @@ namespace Completed
             }
         }
 
-        public void FinishedUpdatingGrid()
-        {
-            PrintGrid();
-        }
-
         public void GenerateNodes()
         {
             for (int y = columns - 1; y >= 0; y--)
@@ -218,24 +215,58 @@ namespace Completed
                 for (int x = 0; x < rows; x++)
                 {
                     string tile = tileGrid[x, y];
-                    switch (tile)
+
+                    GameObject go = Instantiate(nodePrefab, new Vector3(x, y, 0), Quaternion.identity, transform) as GameObject;
+                    go.name = "Node (" + x + ", " + y + ")";
+
+                    tileGameObjectGrid[x, y] = go;
+
+                    if (tile == "P")
                     {
-                        case "F":
-                            Instantiate(nodePrefab, new Vector3(x, y, 0), Quaternion.identity);
-                            break;
-                        case "P":
-                            Instantiate(nodePrefab, new Vector3(x, y, 0), Quaternion.identity);
-                            break;
-                        case "f":
-                            Instantiate(nodePrefab, new Vector3(x, y, 0), Quaternion.identity);
-                            break;
-                        case "e":
-                            Instantiate(nodePrefab, new Vector3(x, y, 0), Quaternion.identity);
-                            break;
+                        print("player" + go);
+                        playerNode = go;
                     }
+                    else if(tile == "E")
+                    {
+                        print("end" + go);
+                        endNode = go;
+                    }
+
+                    go.GetComponent<Node>().nodeType = tile;
                 }
             }
         }
 
+        public void UpdateNode(int x, int y)
+        {
+
+            string tile = tileGrid[x, y];
+            Node node = tileGameObjectGrid[x, y].GetComponent<Node>();
+
+            node.nodeType = tile;
+            node.CalculateCost();
+
+            if (tile == "P")
+                playerNode = node.gameObject;
+        }
+
+        public List<GameObject> GetNeighbours(int x, int y)
+        {
+            List<GameObject> list = new List<GameObject>();
+
+            if(x > 0 && tileGameObjectGrid[x - 1, y] != null)
+                list.Add(tileGameObjectGrid[x - 1, y]);
+
+            if (x < columns-1 && tileGameObjectGrid[x + 1, y] != null)
+                list.Add(tileGameObjectGrid[x + 1, y]);
+
+            if (y > 0 && tileGameObjectGrid[x, y - 1] != null)
+                list.Add(tileGameObjectGrid[x, y - 1]);
+
+            if (y < rows-1 && tileGameObjectGrid[x, y + 1] != null)
+                list.Add(tileGameObjectGrid[x, y + 1]);
+
+            return list;
+        }
     }
 }
