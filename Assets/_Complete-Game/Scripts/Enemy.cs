@@ -57,8 +57,11 @@ namespace Completed
             //If Move returns true, meaning Player was able to move into an empty space.
             if (Move(xDir, yDir, out hit))
             {
-                board.tileGrid[(int)transform.position.x, (int)transform.position.y] = "F";
-                board.tileGrid[(int)transform.position.x + xDir, (int)transform.position.y + yDir] = "e";
+                int xx = (int)transform.position.x;
+                int yy = (int)transform.position.y;
+
+                board.UpdateNode(xx, yy, "F");
+                board.UpdateNode(xx + xDir, yy + yDir, "N");
             }
 
             //Now that Enemy has moved, set skipMove to true to skip next move.

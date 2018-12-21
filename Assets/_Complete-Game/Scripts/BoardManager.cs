@@ -1,7 +1,8 @@
 ﻿using UnityEngine;
 using System;
 using System.Collections.Generic; 		//Allows us to use Lists.
-using Random = UnityEngine.Random; 		//Tells Random to use the Unity Engine random number generator.
+using Random = UnityEngine.Random;      //Tells Random to use the Unity Engine random number generator.
+using System.Collections;
 
 namespace Completed	
 {	
@@ -20,8 +21,7 @@ namespace Completed
 				minimum = min;
 				maximum = max;
 			}
-		}
-		
+		}		
 		
 		public int columns = 8;                                         //Number of columns in our game board.
         public int rows = 8;    										//Number of rows in our game board.
@@ -44,8 +44,10 @@ namespace Completed
         // e = enemy
         public GameObject playerNode;
         public GameObject endNode;
-		
-		private Transform boardHolder;									//A variable to store a reference to the transform of our Board object.
+        public float timeBeforeStart = 0.5f;
+
+
+        private Transform boardHolder;									//A variable to store a reference to the transform of our Board object.
 		private List <Vector3> gridPositions = new List <Vector3> ();   //A list of possible locations to place tiles.
 
         //Clears our list gridPositions and prepares it to generate a new board.
@@ -85,14 +87,11 @@ namespace Completed
 					GameObject toInstantiate = floorTiles[Random.Range (0,floorTiles.Length)];                    
 					
 					//Check if we current position is at board edge, if so choose a random outer wall prefab from our array of outer wall tiles.
+                    // # if it's not a wall, it's a floor, save that information in the tileGrid 2D Array
 					if(x == -1 || x == columns || y == -1 || y == rows)
-                    {
                         toInstantiate = outerWallTiles[Random.Range(0, outerWallTiles.Length)];
-                    }
                     else
-                    {
                         tileGrid[x, y] = "F";
-                    }
 
                     //Instantiate the GameObject instance using the prefab chosen for toInstantiate at the Vector3 corresponding to current grid position in loop, cast it to GameObject.
                     GameObject instance =
@@ -103,6 +102,8 @@ namespace Completed
 				}
 			}
 
+            // # the player always starts at the bottom right and the end is always on the top right
+            // # save that info in the tileGrid 2D Array
             tileGrid[0, 0] = "P";
             tileGrid[columns-1, rows-1] = "E";
         }		
@@ -136,7 +137,8 @@ namespace Completed
 				Vector3 randomPosition = RandomPosition();
                 GameObject[] tileArray = new GameObject[10];
 
-                switch(tileType)
+                // # save on the tileGrid 2D array what tile is spawned on each position 
+                switch (tileType)
                 {
                     case "wall":
                         tileArray = wallTiles;
@@ -145,12 +147,12 @@ namespace Completed
 
                     case "food":
                         tileArray = foodTiles;
-                        tileGrid[(int)randomPosition.x, (int)randomPosition.y] = "f";
+                        tileGrid[(int)randomPosition.x, (int)randomPosition.y] = "O";
                         break;
 
                     case "enemy":
                         tileArray = enemyTiles;
-                        tileGrid[(int)randomPosition.x, (int)randomPosition.y] = "e";
+                        tileGrid[(int)randomPosition.x, (int)randomPosition.y] = "N";
                         break;
                 }
 				
@@ -160,7 +162,7 @@ namespace Completed
 				//Instantiate tileChoice at the position returned by RandomPosition with no change in rotation
 				Instantiate(tileChoice, randomPosition, Quaternion.identity);
 			}
-		}		
+		}
 		
 		//SetupScene initializes our level and calls the previous functions to lay out the game board
 		public void SetupScene (int level)
@@ -186,11 +188,13 @@ namespace Completed
 			//Instantiate the exit tile in the upper right hand corner of our game board
 			Instantiate (exit, new Vector3 (columns - 1, rows - 1, 0f), Quaternion.identity);
 
+            // # After setting up the scene, generate the nodes
             GenerateNodes();
 
-            FindObjectOfType<Player>().StartPathfinding();
+            StartCoroutine(WaitBeforeStart());
         }
 
+        // # Print 
         public void PrintGrid()
         {
             string row = "";
@@ -210,6 +214,15 @@ namespace Completed
 
         public void GenerateNodes()
         {
+            print("GENERATE NDOES");
+            if (transform.childCount > 0)
+            {
+                for(int i = 0; i < transform.childCount; i++)
+                {
+                    Destroy(transform.GetChild(i).gameObject);
+                }
+            }
+
             for (int y = columns - 1; y >= 0; y--)
             {
                 for (int x = 0; x < rows; x++)
@@ -237,17 +250,21 @@ namespace Completed
             }
         }
 
-        public void UpdateNode(int x, int y)
+        public void UpdateNode(int x, int y, string s)
         {
-
-            string tile = tileGrid[x, y];
+            string prevTileType = tileGrid[x, y];
+            tileGrid[x, y] = s;
             Node node = tileGameObjectGrid[x, y].GetComponent<Node>();
 
-            node.nodeType = tile;
+            node.nodeType = s;
             node.CalculateCost();
 
-            if (tile == "P")
+            if (s == "P")
                 playerNode = node.gameObject;
+            else if (prevTileType == "N")
+                // # if the previous tile type was enemy and since the enemy is no longer in that tile
+                // # subtract the enemy cost, to balance its cost,
+                node.toNodeCost -= 100;
         }
 
         public List<GameObject> GetNeighbours(int x, int y)
@@ -267,6 +284,12 @@ namespace Completed
                 list.Add(tileGameObjectGrid[x, y + 1]);
 
             return list;
+        }
+
+        IEnumerator WaitBeforeStart()
+        {
+            yield return new WaitForSeconds(timeBeforeStart);
+            FindObjectOfType<Player>().StartPathfinding();
         }
     }
 }

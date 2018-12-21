@@ -29,30 +29,27 @@ public class Node : MonoBehaviour
         switch (nodeType)
         {
             case "F":
-                toNodeCost = 5;
-                transform.localScale = Vector3.one;
-                break;
-
-            case "P":
-                toNodeCost = 5;
-                transform.localScale = Vector3.one * 2;
-                break;
-
-            case "E":
-                toNodeCost = 5;
-                transform.localScale = Vector3.one * 2;
+                toNodeCost = 10;
                 break;
 
             case "W":
-                toNodeCost = 150;
+                toNodeCost = 30;
                 break;
 
-            case "f":
-                toNodeCost = 2;
+            case "O":
+                // the player looses 1 food for each step
+                // and earn 10 food when they hit a food tile
+                // this means the cost of entering food tiles
+                // is 10 times the negative of entering a floor tile
+                toNodeCost = 0;
                 break;
 
-            case "e":
-                toNodeCost = 25;
+            case "N":
+                toNodeCost = 100;
+                break;
+
+            default:
+                toNodeCost = 10;
                 break;
         }
     }

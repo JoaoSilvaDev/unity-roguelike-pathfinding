@@ -9,6 +9,7 @@ namespace Completed
     //Player inherits from MovingObject, our base class for objects that can move, Enemy also inherits from this.
     public class Player : MovingObject
     {
+        public float timeBetweenSteps = 0.5f;
         public float restartLevelDelay = 1f;        //Delay time in seconds to restart level.
         public int pointsPerFood = 10;              //Number of points to add to player food points when picking up a food object.
         public int pointsPerSoda = 20;              //Number of points to add to player food points when picking up a soda object.
@@ -156,14 +157,10 @@ namespace Completed
                 SoundManager.instance.RandomizeSfx(moveSound1, moveSound2);
                 // find tile where "P" is and move it to the correct one
 
-                board.tileGrid[(int)transform.position.x, (int)transform.position.y] = "F";
-                board.UpdateNode((int)transform.position.x, (int)transform.position.y);
+                board.UpdateNode((int)transform.position.x, (int)transform.position.y, "F");
+                board.UpdateNode((int)transform.position.x + xDir, (int)transform.position.y + yDir, "P");
 
-                board.tileGrid[(int)transform.position.x + xDir, (int)transform.position.y + yDir] = "P";
-                board.UpdateNode((int)transform.position.x + xDir, (int)transform.position.y + yDir);
-
-                print("called");
-                StartCoroutine(RecalculatePath());
+                StartCoroutine(WaitBeforePathfinding());
             }
 
             //Since the player has moved and lost food points, check if the game has ended.
@@ -275,12 +272,9 @@ namespace Completed
             }
         }
 
-        private void Step()
+        public void Step(int x, int y)
         {
-            int h = 0;
-            int v = 0;
-
-            //AttemptMove<Wall>(h, v);
+            AttemptMove<Wall>(x, y);
         }
 
         public void StartPathfinding()
@@ -290,21 +284,11 @@ namespace Completed
             path = pathfinding.Dijkstra();
         }
 
-        IEnumerator RecalculatePath()
+        IEnumerator WaitBeforePathfinding()
         {
-            print("##########################################" +
-                "############################################" +
-                "############################################");
-            yield return new WaitForSeconds(0.5f);
+            yield return new WaitForSeconds(timeBetweenSteps);
             StartPathfinding();
         }
-
-        IEnumerator StepTimer()
-        {
-            yield return new WaitForSeconds(1f);
-            Step();
-            StartCoroutine(StepTimer());
-        }
-	}
+    }
 }
 
